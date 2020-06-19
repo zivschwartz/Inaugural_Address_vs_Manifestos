@@ -1,0 +1,289 @@
+---
+title: "TAD Project"
+author: "Ziv Schwartz"
+date: "5/8/2020"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r}
+library(quanteda)
+library(quanteda.corpora)
+library(ggplot2)
+library(reshape2)
+```
+
+```{r}
+inaugural <- corpus_subset(data_corpus_inaugural, Year >= 1945)
+inaug_years <- list(inaugural$documents$Year)
+
+inaug_dfms <- list()
+inaug_length_w_stop <- list()
+inaug_length_wo_stop <- list()
+for(i in inaugural$documents$texts){
+  dw_stop <- dfm(i, tolower = T, remove_punct = T)
+  dwo_stop <- dfm(i, tolower = T, remove_punct = T, remove = stopwords('en')) 
+  inaug_dfms <- append(inaug_dfms, dwo_stop)
+  inaug_length_w_stop <- append(inaug_length_w_stop, nfeat(dw_stop))
+  inaug_length_wo_stop <- append(inaug_length_wo_stop, nfeat(dwo_stop))
+}
+
+inaug_table <- data.frame(cbind(unlist(inaug_years),
+                                unlist(inaug_length_w_stop), 
+                                unlist(inaug_length_wo_stop)))
+
+cols <- c("Year", "Length_w_Stopwords", "Length_wo_Stopwords")
+colnames(inaug_table) <- cols
+
+inaug_table1 <- melt(inaug_table, id.var='Year')
+
+inaug_length_plot <- ggplot() +
+  geom_line(data = inaug_table1, aes(x = Year, y = value, col = variable)) +
+  scale_x_continuous(breaks=inaug_table1$Year) + 
+  ggtitle('Inaugural Address Feature Lengths') +
+  xlab('Year') +
+  ylab('Document Length') +
+  theme(axis.text.x = element_text(angle = 45))
+
+inaug_length_plot
+```
+
+```{r}
+ukmanifestos <- corpus_subset(data_corpus_ukmanifestos, Year >= 1945) 
+con_manifestos <- corpus_subset(ukmanifestos, Party %in% c('Con'))
+lab_manifestos <- corpus_subset(ukmanifestos, Party %in% c('Lab'))
+
+manifesto_years <- list(con_manifestos$documents$Year)
+
+con_manifesto_dfms <- list()
+con_manifesto_length_w_stop <- list()
+con_manifesto_length_wo_stop <- list()
+for(i in con_manifestos$documents$texts){
+  dw_stop <- dfm(i, tolower = T, remove_punct = T)
+  dwo_stop <- dfm(i, tolower = T, remove_punct = T, remove = stopwords('en')) 
+  con_manifesto_dfms <- append(con_manifesto_dfms, dwo_stop)
+  con_manifesto_length_w_stop <- append(con_manifesto_length_w_stop, nfeat(dw_stop))
+  con_manifesto_length_wo_stop <- append(con_manifesto_length_wo_stop, nfeat(dwo_stop))
+}
+
+lab_manifesto_dfms <- list()
+lab_manifesto_length_w_stop <- list()
+lab_manifesto_length_wo_stop <- list()
+for(i in lab_manifestos$documents$texts){
+  dw_stop <- dfm(i, tolower = T, remove_punct = T)
+  dwo_stop <- dfm(i, tolower = T, remove_punct = T, remove = stopwords('en')) 
+  lab_manifesto_dfms <- append(lab_manifesto_dfms, dwo_stop)
+  lab_manifesto_length_w_stop <- append(lab_manifesto_length_w_stop, nfeat(dw_stop))
+  lab_manifesto_length_wo_stop <- append(lab_manifesto_length_wo_stop, nfeat(dwo_stop))
+}
+
+manifesto_table <- data.frame(cbind(unlist(manifesto_years), 
+                                unlist(con_manifesto_length_w_stop), 
+                                unlist(con_manifesto_length_wo_stop),
+                                unlist(lab_manifesto_length_w_stop), 
+                                unlist(lab_manifesto_length_wo_stop)))
+
+cols <- c("Year", "Con_Length_w_Stopwords", "Con_Length_wo_Stopwords",
+          "Lab_Length_w_Stopwords", "Lab_Length_wo_Stopwords")
+
+colnames(manifesto_table) <- cols
+
+manifesto_table1 <- melt(manifesto_table, id.var='Year')
+
+manifesto_length_plot <- ggplot() +
+  geom_line(data = manifesto_table1, aes(x = Year, y = value, col = variable)) +
+  scale_x_continuous(breaks=manifesto_table1$Year) + 
+  ggtitle('Conservative and Labour Party Manifesto Feature Lengths') +
+  xlab('Year') +
+  ylab('Document Length') + 
+  theme(axis.text.x = element_text(angle = 45))
+
+manifesto_length_plot
+```
+
+
+```{r}
+inaug_entropy <- list()
+for(i in 1:19){
+  dfm_ent <- dfm(inaugural[i], tolower = T, remove_punct = T, remove = stopwords('en'))
+  ent <- textstat_entropy(dfm_ent)
+  inaug_entropy <- append(inaug_entropy, ent)
+}
+
+con_entropy <- list()
+for(i in 1:16){
+  dfm_ent <- dfm(con_manifestos[i], tolower = T, remove_punct = T, remove = stopwords('en'))
+  ent <- textstat_entropy(dfm_ent)
+  con_entropy <- append(con_entropy, ent)
+}
+
+lab_entropy <- list()
+for(i in 1:16){
+  dfm_ent <- dfm(lab_manifestos[i], tolower = T, remove_punct = T, remove = stopwords('en'))
+  ent <- textstat_entropy(dfm_ent)
+  lab_entropy <- append(lab_entropy, ent)
+}
+
+inaug_ent_table <- data.frame(cbind(unlist(inaug_years), 
+                                    unlist(inaug_entropy)))
+
+cols <- c("Year", "Inaugural_Entropy")
+
+colnames(inaug_ent_table) <- cols
+
+inaug_ent_table1 <- melt(inaug_ent_table, id.var='Year')
+                              
+manifesto_ent_table <- data.frame(cbind(unlist(manifesto_years), 
+                                unlist(con_entropy), 
+                                unlist(lab_entropy)))
+
+cols <- c("Year", "Con_Entropy", "Lab_Entropy")
+
+colnames(manifesto_ent_table) <- cols
+
+manifesto_ent_table1 <- melt(manifesto_ent_table, id.var='Year')
+
+ent_plot <- ggplot() +
+  geom_line(data = manifesto_ent_table1, aes(x = Year, y = value, col = variable)) +
+  geom_line(data = inaug_ent_table1, aes(x = Year, y = value, col = variable)) +
+  scale_x_continuous(breaks=inaug_ent_table1$Year) +
+  ggtitle('Document Entropy Values') +
+  xlab('Year') +
+  ylab('Entropy') + 
+  theme(axis.text.x = element_text(angle = 45))
+
+ent_plot
+```
+
+```{r}
+inaug_ttr <- list()
+inaug_mattr <- list()
+inaug_K <- list()
+for(i in 1:19){
+  tok <- tokens(inaugural[i], remove_punct = TRUE)
+  ttr <- textstat_lexdiv(tok, measure = "TTR")
+  inaug_ttr <- append(inaug_ttr, ttr$TTR)
+  mattr <- textstat_lexdiv(tok, measure = "MATTR")
+  inaug_mattr <- append(inaug_mattr, mattr$MATTR)
+  K <- textstat_lexdiv(tok, measure = "K")
+  inaug_K <- append(inaug_K, K$K)
+}
+
+con_ttr <- list()
+con_mattr <- list()
+con_K <- list()
+for(i in 1:16){
+  tok <- tokens(con_manifestos[i], remove_punct = TRUE)
+  ttr <- textstat_lexdiv(tok, measure = "TTR")
+  con_ttr <- append(con_ttr, ttr$TTR)
+  mattr <- textstat_lexdiv(tok, measure = "MATTR")
+  con_mattr <- append(con_mattr, mattr$MATTR)
+  K <- textstat_lexdiv(tok, measure = "K")
+  con_K <- append(con_K, K$K)
+}
+
+lab_ttr <- list()
+lab_mattr <- list()
+lab_K <- list()
+for(i in 1:16){
+  tok <- tokens(lab_manifestos[i], remove_punct = TRUE)
+  ttr <- textstat_lexdiv(tok, measure = "TTR")
+  lab_ttr <- append(lab_ttr, ttr$TTR)
+  mattr <- textstat_lexdiv(tok, measure = "MATTR")
+  lab_mattr <- append(lab_mattr, mattr$MATTR)
+  K <- textstat_lexdiv(tok, measure = "K")
+  lab_K <- append(lab_K, K$K)
+}
+
+
+inaug_lex_table <- data.frame(cbind(unlist(inaug_years), 
+                                unlist(inaug_ttr), 
+                                unlist(inaug_mattr)))
+
+cols <- c("Year", "Inaugural_TTR", "Inaugural_MATTR")
+
+colnames(inaug_lex_table) <- cols
+
+manifesto_lex_table <- data.frame(cbind(unlist(manifesto_years), 
+                                unlist(con_ttr), 
+                                unlist(lab_ttr),
+                                unlist(con_mattr), 
+                                unlist(lab_mattr)))
+
+cols <- c("Year", "Con_TTR", "Con_MATTR", "Lab_TTR", "Lab_MATTR")
+
+colnames(manifesto_lex_table) <- cols
+
+inaug_K_table <- data.frame(cbind(unlist(inaug_years), 
+                                unlist(inaug_K)))
+
+cols <- c("Year", "Inaugural_K")
+
+colnames(inaug_K_table) <- cols
+
+manifesto_K_table <- data.frame(cbind(unlist(manifesto_years), 
+                                unlist(con_K),
+                                unlist(lab_K)))
+
+cols <- c("Year", "Con_K", "Lab_K")
+
+colnames(manifesto_K_table) <- cols
+
+inaug_lex_table1 <- melt(inaug_lex_table, id.var='Year')
+manifesto_lex_table1 <- melt(manifesto_lex_table, id.var='Year')
+
+lex_plot <- ggplot() +
+  geom_line(data = manifesto_lex_table1, aes(x = Year, y = value, col = variable)) +
+  geom_line(data = inaug_lex_table1, aes(x = Year, y = value, col = variable)) +
+  scale_x_continuous(breaks=inaug_lex_table1$Year) +
+  ggtitle('Document Lexical Complexity') +
+  xlab('Year') +
+  ylab('Lexical Complexity') + 
+  theme(axis.text.x = element_text(angle = 45))
+
+lex_plot
+
+inaug_K_table1 <- melt(inaug_K_table, id.var='Year')
+manifesto_K_table1 <- melt(manifesto_K_table, id.var='Year')
+
+K_plot <- ggplot() +
+  geom_line(data = manifesto_K_table1, aes(x = Year, y = value, col = variable)) +
+  geom_line(data = inaug_K_table1, aes(x = Year, y = value, col = variable)) +
+  scale_x_continuous(breaks=inaug_K_table1$Year) +
+  ggtitle("Document Lexical Complexity - Yule's Characteristic K") +
+  xlab('Year') +
+  ylab('Lexical Complexity') + 
+  theme(axis.text.x = element_text(angle = 45))
+
+K_plot
+```
+
+```{r}
+con_similarity <- list()
+lab_similarity <- list()
+for(i in 1:16){
+  dfm_inaug <- dfm(inaugural[i], tolower = T, remove_punct = T, remove = stopwords('en'))
+  dfm_con <- dfm(con_manifestos[i], tolower = T, remove_punct = T, remove = stopwords('en'))
+  dfm_lab <- dfm(lab_manifestos[i], tolower = T, remove_punct = T, remove = stopwords('en'))
+  ci_simil <- textstat_simil(dfm_inaug, dfm_con, method = 'cosine')
+  li_simil <- textstat_simil(dfm_inaug, dfm_lab, method = 'cosine')
+  con_similarity <- append(con_similarity, ci_simil[1])
+  lab_similarity <- append(lab_similarity, li_simil[1])
+}
+
+similarity_table <- data.frame(cbind(unlist(inaug_years)[1:16], 
+                                    unlist(con_similarity), 
+                                    unlist(lab_similarity)))
+
+
+cols <- c("Inaugural Address Year", "Conservative_Cosine_Similarity", "Labour_Cosine_Similarity")
+
+colnames(similarity_table) <- cols
+similarity_table
+```
+
+```{r}
+citation(package = 'quanteda')
+```
+
